@@ -6,6 +6,10 @@ All notable changes to Relay will be documented in this file. The format is insp
 
 ### Added
 
+- PostgreSQL SQLAlchemy mappings for workflow definition revisions, workflow
+  executions, and task executions, with an initial Alembic migration.
+- Local database URL and SQLAlchemy engine/session setup through
+  `RELAY_DATABASE_URL`.
 - Project documentation and roadmap initialization.
 - In-memory workflow and task definition models for v0.1.
 - In-memory workflow and task execution-state models with independent state per run.

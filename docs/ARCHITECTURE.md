@@ -58,6 +58,42 @@ Durable execution will introduce persistent state, eventually backed by PostgreS
 
 Reliable execution will build on at-least-once delivery with acknowledgement/lease design, retries, idempotency, and recovery handling. Later milestones may add scheduling, executor implementations, GitHub event ingestion, and correlated telemetry. Cloud architecture will package these responsibilities into deployable, secure, observable services without changing the core distinction between definition, execution state, and transport.
 
+## v0.2 durable execution design
+
+v0.2 keeps Relay single-process and local. PostgreSQL is the authoritative
+store for workflow definitions and execution history. SQLAlchemy maps the
+records, and Alembic owns schema changes.
+
+Persist a workflow definition separately from each run. A definition stores
+its stable identity, name, ordered task metadata (task names, dependencies,
+and JSON-compatible configured inputs), and a revision number. It does not
+store Python callables. Starting a run creates a `WorkflowExecution` with its
+own identifier, a reference to the definition revision, start/finish times,
+and workflow status. Its associated `TaskExecution` records store task name,
+status, JSON-compatible result when available, error text, and start/finish
+times. Keeping the definition revision referenced by a run preserves what was
+declared for historical inspection when a definition is edited later.
+
+Only JSON-compatible task inputs and results are durable in v0.2. Reject an
+unsupported input before creating an execution; if a task returns a value that
+cannot be encoded, record that task as failed with a clear serialization
+error. Do not silently stringify arbitrary Python objects.
+
+On startup, inspect nonterminal workflow executions. A task left `running` is
+changed to `failed` with an interruption error because its work may have
+produced external side effects and v0.2 cannot determine whether it is safe to
+run again. Pending tasks in that execution become `blocked`; already terminal
+task records remain unchanged. The workflow becomes `failed`. This policy
+records uncertainty without retrying or claiming that work is safe to repeat.
+Persist each outcome transition transactionally. A crash between task side
+effects and recording its result remains an unknown outcome and is reported as
+interrupted on restart.
+
+Recovery applies only to nonterminal runs and is safe to repeat: once records
+are terminal, later startups leave them unchanged. v0.2 does not resume tasks,
+retry failures, guarantee exactly-once effects, or coordinate multiple Relay
+processes.
+
 ## Architecture Decision Records
 
 Record material decisions here using this lightweight format:
@@ -90,3 +126,10 @@ Record material decisions here using this lightweight format:
 - **Context:** v0.1 needs reusable task definitions but does not yet define data flow between tasks.
 - **Decision:** A task callable accepts only its explicitly configured input. Prerequisite results are not implicitly passed to task work.
 - **Consequences:** The initial model stays clear and deterministic. Any future inter-task data-flow contract must be designed explicitly rather than becoming an accidental callable convention.
+
+### ADR-004 — Persist definition revisions and inspect interrupted runs
+
+- **Status:** Accepted
+- **Context:** v0.2 needs durable local history and a restart outcome, while task work is arbitrary Python and may have external side effects.
+- **Decision:** Store workflow metadata as versioned revisions separately from workflow and task execution records. Persist only JSON-compatible inputs and outputs; never persist callables. At startup, mark running tasks failed as interrupted, pending tasks blocked, and the workflow failed. Preserve terminal task records and never rerun work during recovery.
+- **Consequences:** Historical runs remain tied to the definition revision they used. Recovery is deterministic and safe to repeat, but it reports uncertain work as failed and requires a future explicit retry/reliability design to execute it again.

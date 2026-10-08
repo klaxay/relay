@@ -61,6 +61,20 @@ minimal runnable interface because arbitrary Python callables cannot be safely
 represented in a general data file without adding configuration or plugin
 machinery.
 
+## v0.2 persistence schema
+
+The v0.2 persistence layer uses PostgreSQL. Set `RELAY_DATABASE_URL` to a
+SQLAlchemy PostgreSQL URL, then apply the schema with Alembic:
+
+```bash
+export RELAY_DATABASE_URL='postgresql+psycopg://user:password@localhost/relay'
+uv run alembic upgrade head
+```
+
+This milestone provides the database records and schema only. Workflow
+execution still uses the v0.1 in-memory path until persistence integration is
+implemented.
+
 ## Tests
 
 Run the automated tests:

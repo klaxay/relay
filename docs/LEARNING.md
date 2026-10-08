@@ -40,7 +40,28 @@ Understand durable state, persistence boundaries, recovery after interruption, s
 
 **Implementation learnings:**
 
+- Keep workflow definition revisions separate from run records so editing a
+  workflow does not rewrite the meaning of historical executions.
+- Store only JSON-compatible task inputs and results. Python callables are
+  behavior supplied by the running program, not durable workflow data.
+- Treat a task left running after process restart as uncertain: its external
+  effects may have happened even though its result was not committed. Mark it
+  interrupted/failed rather than automatically invoking it again.
+- Recovery can be idempotent when it only transitions nonterminal records and
+  leaves terminal task outcomes untouched.
+- Mapping a definition revision to a row and referencing that row from each
+  execution makes historical identity a database-enforced relationship.
+- Database constraints protect the important invariants (unique revisions,
+  valid statuses, and one task name per run) even when callers bypass domain
+  validation.
+
 **Open questions:**
+
+- What registration convention will later let a local process reconnect
+  persisted task metadata to callable behavior? v0.2 history and recovery do
+  not require reloading arbitrary workflows for execution.
+- Should future versions add a supported representation for non-JSON task
+  artifacts, or keep large outputs outside the execution database?
 
 ## v0.3 — Distributed Workers
 

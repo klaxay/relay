@@ -1,11 +1,11 @@
 # Current project state
 
-**Current Version:** v0.1  
-**Status:** COMPLETE
+**Current Version:** v0.2
+**Status:** IN PROGRESS
 
 ## Current objective
 
-Build and understand a local, single-process workflow engine that executes a validated directed acyclic graph (DAG) and exposes clear execution results.
+Preserve workflow and task execution state so interrupted runs can be inspected and recovered locally.
 
 ## Completed milestones
 
@@ -15,21 +15,24 @@ Build and understand a local, single-process workflow engine that executes a val
 - Milestone 4 — Provide a minimal runnable interface and finish v0.1
   documentation.
 
+## v0.2 milestones
+
+- Milestone 1 — Define durable records and restart behavior. COMPLETE.
+- Milestone 2 — Build the PostgreSQL schema and persistence layer. COMPLETE.
+- Milestone 3 — Integrate durable execution and history inspection.
+- Milestone 4 — Implement and test restart recovery.
+- Milestone 5 — Document v0.2 completion.
+
 ## Current work
 
-v0.1 now executes validated workflow plans synchronously in the local process.
-Each execution records task results or errors and a terminal workflow outcome.
-Failures block their dependent tasks while unrelated branches continue in the
-deterministic plan order. The included local entry point demonstrates execution
-and reports the recorded in-memory outcome in a deterministic readable format.
-Run it with `python main.py` from the repository root.
+Milestones 1 and 2 establish the durable record boundary and PostgreSQL-backed
+schema in `docs/ARCHITECTURE.md`. SQLAlchemy records and the initial Alembic
+migration are in place. Next is Milestone 3: integrate durable execution and
+history inspection.
 
 ## Known issues
 
-No known issues. Execution state is intentionally process-local and is lost
-when the process exits.
-
-## Next milestone
-
-v0.2 — Add durable local execution state and recovery as described in the
-roadmap. No v0.2 implementation has started.
+Workflow execution still uses the v0.1 in-memory path; the persistence layer is
+not integrated until v0.2 milestone 3. Callable task behavior cannot be
+reconstructed from persisted workflow metadata; recovery will inspect
+interrupted runs and will not rerun work.
